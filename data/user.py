@@ -12,7 +12,7 @@ class User(SqlAlchemyBase, SerializerMixin, UserMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=True)
-    position = sqlalchemy.Column(sqlalchemy.String)
+    #position = sqlalchemy.Column(sqlalchemy.String)
     #hours_worked = sqlalchemy.Column(sqlalchemy.Float)
     phone = sqlalchemy.Column(sqlalchemy.String)
     hashed_password = sqlalchemy.Column(sqlalchemy.String, nullable=True)

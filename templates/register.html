@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<html lang="ru">
 <head>
     <title>HTML Register Form</title>
     <link rel="stylesheet" href="../static/style.css">
@@ -7,36 +10,50 @@
        <div class="main">
         <h3>Введите данные работника</h3>
 
-        <form action="">
-            <label for="first">
-                ФИО:
-            </label>
-            <input type="text" id="first" name="first"
-                placeholder="Иванов Иван Иванович" required>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                {{ form.csrf_token }}
+                <label>
+                    ФИО:
+                </label>
+                {{ form.name(class_="form-control") }}
+                {% for error in form.name.errors %}
+                    <p class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-            <label for="first">
-                Телефон:
-            </label>
-            <input type="text" id="first" name="first"
-                placeholder="+7..." required>
+                <label>
+                    Телефон:
+                </label>
+                {{ form.phone(type="text", placeholder="Номер телефона (+7...)") }}
+                {% for error in form.phone.errors %}
+                    {{ error }}
+                 {% endfor %}
 
-            <label for="password">
-                Пароль:
-            </label>
-            <input type="password" id="password" name="password"
-                placeholder="Enter your Password" required>
+                <label>
+                    Пароль:
+                </label>
+                 {{ form.password(type="password", placeholder="Пароль") }}
+                {% for error in form.password.errors %}
+                    <p class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-            <label for="password">
-                Повторите пароль:
-            </label>
-            <input type="password" id="password" name="password"
-                placeholder="Enter your Password" required>
+                <label>
+                    Повторите пароль:
+                </label>
+                {{ form.password_again(type="password", placeholder="Повторите Пароль") }}
+                {% for error in form.password_again.errors %}
+                    <p class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-            <div class="wrap">
-                <button type="submit">
-                    Зарегестрировать
-                </button>
-            </div>
-        </form>
+                <div class="wrap">
+                    {{ form.submit(type="submit", class="button", value="Создать аккаунт") }}
+                </div>
+            </form>
     </div>
 </body>

@@ -103,7 +103,50 @@ def user_profile(id):
         return render_template('404.html', id=id), 404
     if current_user.id != id:
         return render_template('403.html'), 403
-    return redirect("/")
+    return render_template('main.html')
+
+
+@app.route('user/<int:id>/drafts')
+def users_drafts(id):
+    """Загрузка чертежей, обработка загрузки файлов, перевод в pdf"""
+    pass
+
+
+@app.route('user/<int:id>/<int:id_chat>')
+def chat(id, id_chat):
+    """Чат с другими сотрудниками/сотрудником"""
+    pass
+
+
+@app.route('news')
+def main_news():
+    """Вывод новостей на вкладке новости и при входе в акк
+    Возможо загрузка из БД с новостями, под вопросом"""
+    pass
+
+
+app.route('user/<user:id/tasks>')
+def tasks(id):
+    """Страница со всеми задачами"""
+    pass
+
+app.route('user/<int:id/tasks/<int:task_id>')
+def one_task(id, tasks_id):
+    """Страница одной задачи"""
+    pass
+
+
+"""Курсы и регламенты, справочная информация. 
+    Предполагается, что имеется отдельная БД с ссылками на видео или сторонние источники"""
+app.route('user/<int:id>/courses')
+def courses(id):
+    pass
+
+app.route('user/<int:id>/courses/<int:course_id>')
+def one_course(id, course_id):
+    pass
+
+
 
 def main():
     db_session.global_init("db/users.sqlite")
