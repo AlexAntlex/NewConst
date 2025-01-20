@@ -1,16 +1,17 @@
 import phonenumbers
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, SubmitField, StringField,SelectField
+from wtforms import PasswordField, SubmitField, StringField,SelectField, EmailField
 from wtforms.validators import DataRequired, ValidationError
 
 
 class RegisterForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
     phone = StringField('Phone', validators=[DataRequired()])
+    email = EmailField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     password_again = PasswordField('Repeat password', validators=[DataRequired()])
-    #position = SelectField('Position', choices=[('1', 'Младший инженер'), ('2', 'Инженер'),
-                                                #('3', 'Старший инженер')])
+    position = SelectField('Position', choices=[('Младший инженер', 'Младший инженер'), ('Инженер', 'Инженер'),
+                                                ('Старший инженер', 'Старший инженер')])
 
     submit = SubmitField('Войти')
 

@@ -12,9 +12,10 @@ class User(SqlAlchemyBase, SerializerMixin, UserMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=True)
-    #position = sqlalchemy.Column(sqlalchemy.String)
-    #hours_worked = sqlalchemy.Column(sqlalchemy.Float)
+    position = sqlalchemy.Column(sqlalchemy.String)
     phone = sqlalchemy.Column(sqlalchemy.String)
+    email = sqlalchemy.Column(sqlalchemy.String,
+                              index=True, unique=True, nullable=True)
     hashed_password = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     drafts = relationship("Draft")

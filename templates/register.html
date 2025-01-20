@@ -2,7 +2,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <html lang="ru">
 <head>
-    <title>HTML Register Form</title>
+    <title>Регистрация нового пользователя</title>
     <link rel="stylesheet" href="../static/style.css">
 </head>
 
@@ -31,6 +31,23 @@
                     {{ error }}
                  {% endfor %}
 
+
+                <label>
+                    Электронная почта:
+                </label>
+                {{ form.email(class_="form-control", type="email") }}
+                {% for error in form.email.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+
+
+                <label>
+                    Должность:
+                </label>
+                {{ form.position(placeholder="Должность работника") }}
+
                 <label>
                     Пароль:
                 </label>
@@ -52,7 +69,7 @@
                 {% endfor %}
 
                 <div class="wrap">
-                    {{ form.submit(type="submit", class="button", value="Создать аккаунт") }}
+                    {{ form.submit(type="submit", class="btn btn-success", value="Создать аккаунт") }}
                 </div>
             </form>
     </div>

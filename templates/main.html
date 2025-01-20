@@ -17,7 +17,7 @@
 <section class="py-5">
 	<nav class="navbar navbar-expand-lg bg-light">
 		<div class="container">
-			<a class="nav-link" href="">Выйти </a>
+			<a class="nav-link" href="/logout">Выйти </a>
             <!--Logo-->
 			<a class="navbar-brand" href=""><img alt="Logo" class="img-fluid" height="" src="../static/cogs.png" width="150"></a> <button aria-controls="navbarSupportedContent4" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-bs-target="#navbarSupportedContent4" data-bs-toggle="collapse" type="button"><span class="navbar-toggler-icon"></span></button>
 			<div class="collapse navbar-collapse" id="navbarSupportedContent4">
@@ -39,7 +39,7 @@
 					</li>
 				</ul>
 				<div class="d-flex ms-lg-4 mb-3 mb-lg-0">
-					<a class="text-dark ms-3" href=""><svg class="bi bi-person-circle" fill="currentColor" height="24" viewbox="0 0 16 16" width="24" xmlns="http://www.w3.org/2000/svg">
+					<a class="text-dark ms-3" href="/user/{{g.user.id}}"><svg class="bi bi-person-circle" fill="currentColor" height="24" viewbox="0 0 16 16" width="24" xmlns="http://www.w3.org/2000/svg">
 					<path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"></path>
 					<path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" fill-rule="evenodd"></path></svg></a>
 				</div>
@@ -47,8 +47,11 @@
 		</div>
 	</nav>
 </section>
-  <main role="main" class="container">
-	  {% block content %}{% endblock %}
-  </main>
+
+
+ <main role="main" class="container">
+	 {% block content %}{% endblock %}
+ </main>
+
 </body>
 </html>

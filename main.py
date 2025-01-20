@@ -46,15 +46,16 @@ def reqister():
                                    form=form,
                                    message="Пароли не совпадают")
         session = db_session.create_session()
-        if (session.query(User).filter(User.phone == form.phone.data).first()):
+        if (session.query(User).filter(User.phone == form.phone.data).first()) or (
+                session.query(User).filter(User.email == form.email.data).first()):
             return render_template('register.html',
                                    form=form,
                                    message="Такой пользователь уже есть")
         user = User(
             name=form.name.data,
-            phone=form.phone.data
-            #position=form.position.data,
-        )
+            phone=form.phone.data,
+            position=form.position.data,
+            email = form.email.data        )
         user.set_password(form.password.data)
         session.add(user)
         session.commit()
@@ -71,7 +72,8 @@ def login():
             User.phone == form.phone.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-            return redirect(f'/user/{g.user.id}')
+            my = g.user.id
+            return redirect(f'/user/{g.user.id}',  my=my)
         if not user:
             return render_template('login.html',
                                    message="Такого пользователя не существует",
@@ -103,34 +105,41 @@ def user_profile(id):
         return render_template('404.html', id=id), 404
     if current_user.id != id:
         return render_template('403.html'), 403
-    return render_template('main.html')
+    else:
+        fio = user.name
+        phone = user.phone
+        email = user.email
+        position = user.position
+        my = g.user.id
+    return render_template('user_profile.html', fio=fio, position=position, email=email, phone=phone,
+                           my=my)
 
 
-@app.route('user/<int:id>/drafts')
+@app.route('/user/<int:id>/drafts')
 def users_drafts(id):
     """Загрузка чертежей, обработка загрузки файлов, перевод в pdf"""
     pass
 
 
-@app.route('user/<int:id>/<int:id_chat>')
+@app.route('/user/<int:id>/<int:id_chat>')
 def chat(id, id_chat):
     """Чат с другими сотрудниками/сотрудником"""
     pass
 
 
-@app.route('news')
+@app.route('/news')
 def main_news():
     """Вывод новостей на вкладке новости и при входе в акк
     Возможо загрузка из БД с новостями, под вопросом"""
     pass
 
 
-app.route('user/<user:id/tasks>')
+app.route('/user/<user:id/tasks>')
 def tasks(id):
     """Страница со всеми задачами"""
     pass
 
-app.route('user/<int:id/tasks/<int:task_id>')
+app.route('/user/<int:id/tasks/<int:task_id>')
 def one_task(id, tasks_id):
     """Страница одной задачи"""
     pass
@@ -138,11 +147,11 @@ def one_task(id, tasks_id):
 
 """Курсы и регламенты, справочная информация. 
     Предполагается, что имеется отдельная БД с ссылками на видео или сторонние источники"""
-app.route('user/<int:id>/courses')
+app.route('/user/<int:id>/courses')
 def courses(id):
     pass
 
-app.route('user/<int:id>/courses/<int:course_id>')
+app.route('/user/<int:id>/courses/<int:course_id>')
 def one_course(id, course_id):
     pass
 

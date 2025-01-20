@@ -1,5 +1,18 @@
-{% extends "base.html" %}
+{% extends "main.html" %}
 {% block content %}
 
-
+<link rel="stylesheet" href="../static/user.css">
+<body>
+<div class="conteiner">
+  <figure class="fir-image-figure">
+      <img class="fir-author-image fir-clickcircle" src="../static/test.jpg" alt="">
+    <figcaption>
+      <div class="fig-author-figure-title">{{fio}}</div>
+      <div class="fig-author-figure-title">{{position}}</div>
+      <div class="fig-author-figure-title">{{email}}</div>
+      <div class="fig-author-figure-title">{{phone}}</div>
+    </figcaption>
+  </figure>
+</div>
+</body>
 {% endblock %}
