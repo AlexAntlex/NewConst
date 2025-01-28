@@ -1,13 +1,16 @@
-from flask import Flask, render_template, g, request
-from werkzeug.utils import redirect
+import os
+from datetime import datetime
+from flask import Flask, render_template, g, request, flash
+from werkzeug.utils import redirect, secure_filename
 from flask_login import login_user, LoginManager, AnonymousUserMixin, current_user, login_required, logout_user
 from configuration import Config
 from data import db_session
 from data.user import User
 from data.draft import Draft
+from format_handler import rename_file_on_server, SLT_to_PDF, DWG_to_PDF
 from forms.login import LoginForm
 from forms.register import RegisterForm
-
+from forms.user_drafts import DraftForm
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -23,6 +26,10 @@ login_manager.anonymous_user = Anonymous
 login_manager.init_app(app)
 
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in app.config['ALLOWED_EXTENSIONS']
+
 @app.before_request
 def before_request():
     g.user = current_user
@@ -30,6 +37,8 @@ def before_request():
 
 @app.route("/", methods=['GET'])
 def index():
+    if current_user.is_authenticated:
+        return redirect('/news')
     return redirect('/login')
 
 
@@ -72,8 +81,7 @@ def login():
             User.phone == form.phone.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-            my = g.user.id
-            return redirect(f'/user/{g.user.id}',  my=my)
+            return redirect(f'/user/{g.user.id}')
         if not user:
             return render_template('login.html',
                                    message="Такого пользователя не существует",
@@ -115,10 +123,65 @@ def user_profile(id):
                            my=my)
 
 
-@app.route('/user/<int:id>/drafts')
+
+@app.route('/user/<int:id>/drafts', methods=['GET', 'POST'])
 def users_drafts(id):
     """Загрузка чертежей, обработка загрузки файлов, перевод в pdf"""
-    pass
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    form = DraftForm()
+    if user == None:
+        flash('User ' + id + ' not found.')
+        return render_template('login.html')
+    else:
+        my = g.user.id
+        user_cur = session.query(User).filter_by(id=my).first()
+        user_id = int(id)
+        file = form.file_url.data
+
+        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}'):
+            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}')
+        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/miniature'):
+            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/miniature')
+        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts'):
+            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts')
+
+        if file and allowed_file(file.filename):
+            file.filename = rename_file_on_server(secure_filename(file.content_type)[6:],
+                                         app.config['UPLOAD_FOLDER_USER'] + f'{user_id}')
+            filename = secure_filename(file.filename)
+            way_to_file = os.path.join(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/', filename)
+
+            way_to_save = None
+            if secure_filename(file.content_type).lower() == 'stl':
+                way_to_save = SLT_to_PDF(filename, way_to_file)
+            if secure_filename(file.content_type).lower() == 'dwg':
+                way_to_save = DWG_to_PDF(filename, way_to_file)
+            if way_to_file != None:
+                way_to_miniature = app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/' + "miniature/" + way_to_file
+                draft = Draft(
+                    name=filename,
+                    upload_date=datetime.now().strftime("%A %d %b %Y (%H:%M)"),
+                    way_to_file=way_to_save,
+                    miniature=way_to_miniature)
+                session.add(draft)
+                session.commit()
+                flash("Файл загружен.")
+                return redirect(f'{id}')
+            else:
+                os.remove(way_to_file)
+                flash("Неподходящий формат файла")
+        else:
+            flash("Файл не выбран")
+        users_drafts = session.query(Draft).filter_by(autor_id=user_id).order_by(Draft.id.desc())
+        return render_template('drafts.html', user_id=user_id, my_id=my,
+                              form=form, drafts=users_drafts,id=id, user=user, me=user_cur)
+
+
+@app.route('/curses')
+def courses():
+    return render_template('curses.html')
+
 
 
 @app.route('/user/<int:id>/<int:id_chat>')
@@ -131,7 +194,7 @@ def chat(id, id_chat):
 def main_news():
     """Вывод новостей на вкладке новости и при входе в акк
     Возможо загрузка из БД с новостями, под вопросом"""
-    pass
+    return render_template('news.html')
 
 
 app.route('/user/<user:id/tasks>')

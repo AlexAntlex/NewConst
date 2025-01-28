@@ -19,6 +19,7 @@ class User(SqlAlchemyBase, SerializerMixin, UserMixin):
     hashed_password = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     drafts = relationship("Draft")
+    tasks = relationship("Task")
 
 
     def set_password(self, password):
