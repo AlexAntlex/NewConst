@@ -141,8 +141,6 @@ def users_drafts(id):
 
         if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}'):
             os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}')
-        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/miniature'):
-            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/miniature')
         if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts'):
             os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts')
 
@@ -158,19 +156,19 @@ def users_drafts(id):
             if secure_filename(file.content_type).lower() == 'dwg':
                 way_to_save = DWG_to_PDF(filename, way_to_file)
             if way_to_file != None:
-                way_to_miniature = app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/' + "miniature/" + way_to_file
                 draft = Draft(
+                    user_id=user_id,
                     name=filename,
-                    upload_date=datetime.now().strftime("%A %d %b %Y (%H:%M)"),
+                    upload_date=datetime.now().strftime("%A %d %b %Y"),
                     way_to_file=way_to_save,
-                    miniature=way_to_miniature)
+                    original_extension=secure_filename(file.content_type).lower(),)
                 session.add(draft)
                 session.commit()
                 flash("Файл загружен.")
                 return redirect(f'{id}')
             else:
                 os.remove(way_to_file)
-                flash("Неподходящий формат файла")
+                flash("Невозможно загрузить данный файл")
         else:
             flash("Файл не выбран")
         users_drafts = session.query(Draft).filter_by(autor_id=user_id).order_by(Draft.id.desc())
@@ -178,9 +176,23 @@ def users_drafts(id):
                               form=form, drafts=users_drafts,id=id, user=user, me=user_cur)
 
 
-@app.route('/curses')
-def courses():
-    return render_template('curses.html')
+
+app.route('/user/<user:id/tasks>')
+def tasks(id):
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    if user == None:
+        return render_template('404.html', id=id), 404
+    if current_user.id != id:
+        return render_template('403.html'), 403
+    else:
+        return render_template('tasks.html', id=user)
+
+
+app.route('/user/<int:id/tasks/<int:task_id>')
+def one_task(id, tasks_id):
+    """Страница одной задачи"""
+    pass
 
 
 
@@ -190,33 +202,18 @@ def chat(id, id_chat):
     pass
 
 
+# Курсы и новости должны быть без обработки - чистая верстка для демонстрации
+
+@app.route('/curses')
+def courses():
+    return render_template('curses.html')
+
+
 @app.route('/news')
 def main_news():
     """Вывод новостей на вкладке новости и при входе в акк
     Возможо загрузка из БД с новостями, под вопросом"""
     return render_template('news.html')
-
-
-app.route('/user/<user:id/tasks>')
-def tasks(id):
-    """Страница со всеми задачами"""
-    pass
-
-app.route('/user/<int:id/tasks/<int:task_id>')
-def one_task(id, tasks_id):
-    """Страница одной задачи"""
-    pass
-
-
-"""Курсы и регламенты, справочная информация. 
-    Предполагается, что имеется отдельная БД с ссылками на видео или сторонние источники"""
-app.route('/user/<int:id>/courses')
-def courses(id):
-    pass
-
-app.route('/user/<int:id>/courses/<int:course_id>')
-def one_course(id, course_id):
-    pass
 
 
 
