@@ -186,6 +186,7 @@ def tasks(id):
     if current_user.id != id:
         return render_template('403.html'), 403
     else:
+        # Переделать форму и таблицу в бд, пока плохо продуманно
         return render_template('tasks.html', id=user)
 
 
