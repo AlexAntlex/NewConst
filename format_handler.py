@@ -23,7 +23,7 @@ def SLT_to_PDF(filename, way_to_file):
 
 def DWG_to_PDF(filename, way_to_file):
     # Load an existing DWG file
-    image = cad.Image.load("C:\Files\sample.dwg")
+    image = cad.Image.load(f'{filename}.dwg')
     # Specify PDF Options
     pdfOptions = cad.imageoptions.PdfOptions()
     # Save as PDF
