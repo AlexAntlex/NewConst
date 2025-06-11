@@ -8,11 +8,11 @@ class Task(SqlAlchemyBase, SerializerMixin):
 
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True, autoincrement=True)
-    title = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    text_task = sqlalchemy.Column(sqlalchemy.String)
-    date = sqlalchemy.Column(sqlalchemy.Date)
+    title = sqlalchemy.Column(sqlalchemy.String(100), nullable=False)
+    created_at = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    deadline = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
+    participants = sqlalchemy.Column(sqlalchemy.String(255), nullable=False) # Список участников через запятую
+    description = sqlalchemy.Column(sqlalchemy.Text, nullable=False)
 
     user_id_worker = sqlalchemy.Column(sqlalchemy.Integer,
                                        sqlalchemy.ForeignKey("user.id"), nullable=True)
-    text_steps = sqlalchemy.Column(sqlalchemy.Integer,
-                                   sqlalchemy.ForeignKey("task_step.id"), nullable=True)

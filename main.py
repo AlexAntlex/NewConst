@@ -1,10 +1,14 @@
 import os
 from datetime import datetime
+from email.message import Message
+
 from flask import Flask, render_template, g, request, flash
 from werkzeug.utils import redirect, secure_filename
 from flask_login import login_user, LoginManager, AnonymousUserMixin, current_user, login_required, logout_user
 from configuration import Config
 from data import db_session
+from data.task_steps import TaskComment
+from data.tasks import Task
 from data.user import User
 from data.draft import Draft
 from format_handler import rename_file_on_server, SLT_to_PDF, DWG_to_PDF
@@ -176,8 +180,8 @@ def users_drafts(id):
                               form=form, drafts=users_drafts,id=id, user=user, me=user_cur)
 
 
-
-app.route('/user/<user:id/tasks>')
+# Задачи
+@app.route('/user/<user:id/tasks>')
 def tasks(id):
     session = db_session.create_session()
     user = session.query(User).filter_by(id=id).first()
@@ -185,38 +189,58 @@ def tasks(id):
         return render_template('404.html', id=id), 404
     if current_user.id != id:
         return render_template('403.html'), 403
-    else:
-        # Переделать форму и таблицу в бд, пока плохо продуманно
-        return render_template('tasks.html', id=user)
+    user_tasks = Task.query.filter(Task.participants.contains(user)).all()
+    return render_template('tasks.html', id=user, tasks=user_tasks)
 
+# Страница отдельной задачи
+@app.route('/user/<int:id/tasks/<int:task_id>')
+def task_detail(id, tasks_id):
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    if user == None:
+        return render_template('404.html', id=id), 404
+    if current_user.id != id:
+        return render_template('403.html'), 403
+    task = Task.query.get_or_404(tasks_id)
+    comments = TaskComment.query.filter_by(tasks_id=tasks_id).all()
+    if request.method == 'POST':
+        comment_text = request.form['comment']
+        new_comment = TaskComment(tasks_id=tasks_id, author=session['username'], comment=comment_text, created_at=db_session.func.now())
+        session.add(new_comment)
+        session.commit()
+        return redirect(url_for('task_detail', tasks_id=tasks_id))
+    return render_template('task_detail.html', task=task, comments=comments)
 
-app.route('/user/<int:id/tasks/<int:task_id>')
-def one_task(id, tasks_id):
-    """Страница одной задачи"""
-    pass
+# WebSocket комната
+@socketio.on('join')
+def on_join(data):
+    sesion = db_session.create_session()
+    username = sesion.get('username')
+    if username:
+        join_room(username)
 
-
-
-@app.route('/user/<int:id>/<int:id_chat>')
-def chat(id, id_chat):
-    """Чат с другими сотрудниками/сотрудником"""
-    pass
-
+# WebSocket обработка сообщений
+@socketio.on('message')
+def handle_message(data):
+    session = db_session.create_session()
+    sender = session.get('username')
+    receiver = data['receiver']
+    message = data['message']
+    msg = Message(sender=sender, receiver=receiver, message=message)
+    session.add(msg)
+    session.commit()
+    emit('message', {'sender': sender, 'message': message}, room=receiver)
 
 # Курсы и новости должны быть без обработки - чистая верстка для демонстрации
-
 @app.route('/curses')
 def courses():
     return render_template('curses.html')
-
 
 @app.route('/news')
 def main_news():
     """Вывод новостей на вкладке новости и при входе в акк
     Возможо загрузка из БД с новостями, под вопросом"""
     return render_template('news.html')
-
-
 
 def main():
     db_session.global_init("db/users.sqlite")

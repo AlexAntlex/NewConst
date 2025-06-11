@@ -1,9 +1,11 @@
+from csv import excel
+
 import aspose.cad as cad
 from aspose.cad.imageoptions import PdfOptions
+import win32com
 import os
 import random
 import string
-
 
 def SLT_to_PDF(filename, way_to_file):
     image = cad.Image.load(f'{filename}.stl')
@@ -31,6 +33,37 @@ def DWG_to_PDF(filename, way_to_file):
     image.save(full_naming, pdfOptions)
     return full_naming
 
+
+# Требует наличие программы COMPAS-3D на сервере с приложением
+def CDW_to_PDF(filename, way_to_file):
+
+    try:
+        # подключаемся к API КОМПАС-3D
+        kompas = win32com.client.Dispatch("Kompas.Application.5")
+        kompas.Visible = True # Можно скрыть (False), если не нужен интерфейс
+        # Получаем API документа
+        doc = kompas.Documents.Open(filename)
+        if not doc:
+            print("Ошибка: не удалось открыть файл.")
+            return False
+        # Настройка экспорта в PDF
+        export_params = kompas.GetParamStruct(101) # 101 - тип параметров экспорта в PDF
+        if export_params:
+            export_params.Init()
+            export_params.lResolution = 600    # DPI разрешение
+            export_params.bShowWatermark = False    # Отключаем водяные знаки
+        # Выполняем экспорт
+        result = doc.SaveAs(way_to_file, 101, export_params)  # 101 - формат PDF
+        doc.Close()
+        if result:
+            print(f"Файл успешно сохранен: {way_to_file}")
+        else:
+            print("Ошибка при сохранении PDF.")
+            return False
+
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        return False
 
 def rename_file_on_server(ext, path):
     let = string.ascii_letters + string.digits
