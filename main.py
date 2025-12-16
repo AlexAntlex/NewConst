@@ -1,13 +1,20 @@
-from flask import Flask, render_template, g, request
-from werkzeug.utils import redirect
+import os
+from datetime import datetime
+from email.message import Message
+
+from flask import Flask, render_template, g, request, flash
+from werkzeug.utils import redirect, secure_filename
 from flask_login import login_user, LoginManager, AnonymousUserMixin, current_user, login_required, logout_user
 from configuration import Config
 from data import db_session
+from data.task_steps import TaskComment
+from data.tasks import Task
 from data.user import User
 from data.draft import Draft
+from format_handler import rename_file_on_server, SLT_to_PDF, DWG_to_PDF
 from forms.login import LoginForm
 from forms.register import RegisterForm
-
+from forms.user_drafts import DraftForm
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -23,6 +30,10 @@ login_manager.anonymous_user = Anonymous
 login_manager.init_app(app)
 
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in app.config['ALLOWED_EXTENSIONS']
+
 @app.before_request
 def before_request():
     g.user = current_user
@@ -30,6 +41,8 @@ def before_request():
 
 @app.route("/", methods=['GET'])
 def index():
+    if current_user.is_authenticated:
+        return redirect('/news')
     return redirect('/login')
 
 
@@ -46,15 +59,16 @@ def reqister():
                                    form=form,
                                    message="Пароли не совпадают")
         session = db_session.create_session()
-        if (session.query(User).filter(User.phone == form.phone.data).first()):
+        if (session.query(User).filter(User.phone == form.phone.data).first()) or (
+                session.query(User).filter(User.email == form.email.data).first()):
             return render_template('register.html',
                                    form=form,
                                    message="Такой пользователь уже есть")
         user = User(
             name=form.name.data,
-            phone=form.phone.data
-            #position=form.position.data,
-        )
+            phone=form.phone.data,
+            position=form.position.data,
+            email = form.email.data        )
         user.set_password(form.password.data)
         session.add(user)
         session.commit()
@@ -103,7 +117,130 @@ def user_profile(id):
         return render_template('404.html', id=id), 404
     if current_user.id != id:
         return render_template('403.html'), 403
-    return redirect("/")
+    else:
+        fio = user.name
+        phone = user.phone
+        email = user.email
+        position = user.position
+        my = g.user.id
+    return render_template('user_profile.html', fio=fio, position=position, email=email, phone=phone,
+                           my=my)
+
+
+
+@app.route('/user/<int:id>/drafts', methods=['GET', 'POST'])
+def users_drafts(id):
+    """Загрузка чертежей, обработка загрузки файлов, перевод в pdf"""
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    form = DraftForm()
+    if user == None:
+        flash('User ' + id + ' not found.')
+        return render_template('login.html')
+    else:
+        my = g.user.id
+        user_cur = session.query(User).filter_by(id=my).first()
+        user_id = int(id)
+        file = form.file_url.data
+
+        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}'):
+            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}')
+        if not os.path.exists(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts'):
+            os.makedirs(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/drafts')
+
+        if file and allowed_file(file.filename):
+            file.filename = rename_file_on_server(secure_filename(file.content_type)[6:],
+                                         app.config['UPLOAD_FOLDER_USER'] + f'{user_id}')
+            filename = secure_filename(file.filename)
+            way_to_file = os.path.join(app.config['UPLOAD_FOLDER_USER'] + f'{user_id}/', filename)
+
+            way_to_save = None
+            if secure_filename(file.content_type).lower() == 'stl':
+                way_to_save = SLT_to_PDF(filename, way_to_file)
+            if secure_filename(file.content_type).lower() == 'dwg':
+                way_to_save = DWG_to_PDF(filename, way_to_file)
+            if way_to_file != None:
+                draft = Draft(
+                    user_id=user_id,
+                    name=filename,
+                    upload_date=datetime.now().strftime("%A %d %b %Y"),
+                    way_to_file=way_to_save,
+                    original_extension=secure_filename(file.content_type).lower(),)
+                session.add(draft)
+                session.commit()
+                flash("Файл загружен.")
+                return redirect(f'{id}')
+            else:
+                os.remove(way_to_file)
+                flash("Невозможно загрузить данный файл")
+        else:
+            flash("Файл не выбран")
+        users_drafts = session.query(Draft).filter_by(autor_id=user_id).order_by(Draft.id.desc())
+        return render_template('drafts.html', user_id=user_id, my_id=my,
+                              form=form, drafts=users_drafts,id=id, user=user, me=user_cur)
+
+
+# Задачи
+@app.route('/user/<user:id/tasks>')
+def tasks(id):
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    if user == None:
+        return render_template('404.html', id=id), 404
+    if current_user.id != id:
+        return render_template('403.html'), 403
+    user_tasks = Task.query.filter(Task.participants.contains(user)).all()
+    return render_template('tasks.html', id=user, tasks=user_tasks)
+
+# Страница отдельной задачи
+@app.route('/user/<int:id/tasks/<int:task_id>')
+def task_detail(id, tasks_id):
+    session = db_session.create_session()
+    user = session.query(User).filter_by(id=id).first()
+    if user == None:
+        return render_template('404.html', id=id), 404
+    if current_user.id != id:
+        return render_template('403.html'), 403
+    task = Task.query.get_or_404(tasks_id)
+    comments = TaskComment.query.filter_by(tasks_id=tasks_id).all()
+    if request.method == 'POST':
+        comment_text = request.form['comment']
+        new_comment = TaskComment(tasks_id=tasks_id, author=session['username'], comment=comment_text, created_at=db_session.func.now())
+        session.add(new_comment)
+        session.commit()
+        return redirect(url_for('task_detail', tasks_id=tasks_id))
+    return render_template('task_detail.html', task=task, comments=comments)
+
+# WebSocket комната
+@socketio.on('join')
+def on_join(data):
+    sesion = db_session.create_session()
+    username = sesion.get('username')
+    if username:
+        join_room(username)
+
+# WebSocket обработка сообщений
+@socketio.on('message')
+def handle_message(data):
+    session = db_session.create_session()
+    sender = session.get('username')
+    receiver = data['receiver']
+    message = data['message']
+    msg = Message(sender=sender, receiver=receiver, message=message)
+    session.add(msg)
+    session.commit()
+    emit('message', {'sender': sender, 'message': message}, room=receiver)
+
+# Курсы и новости должны быть без обработки - чистая верстка для демонстрации
+@app.route('/curses')
+def courses():
+    return render_template('curses.html')
+
+@app.route('/news')
+def main_news():
+    """Вывод новостей на вкладке новости и при входе в акк
+    Возможо загрузка из БД с новостями, под вопросом"""
+    return render_template('news.html')
 
 def main():
     db_session.global_init("db/users.sqlite")

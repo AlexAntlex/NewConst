@@ -13,11 +13,13 @@ class User(SqlAlchemyBase, SerializerMixin, UserMixin):
                            primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     position = sqlalchemy.Column(sqlalchemy.String)
-    #hours_worked = sqlalchemy.Column(sqlalchemy.Float)
     phone = sqlalchemy.Column(sqlalchemy.String)
+    email = sqlalchemy.Column(sqlalchemy.String,
+                              index=True, unique=True, nullable=True)
     hashed_password = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     drafts = relationship("Draft")
+    tasks = relationship("Task")
 
 
     def set_password(self, password):
